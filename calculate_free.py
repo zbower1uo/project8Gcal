@@ -3,15 +3,6 @@ import logging
 import arrow
 
 def freetimes(busylist, begin, end):
-  """
-  Takes a list of busy times and checks to see if they are within the proper time range
-  Args:
-    busy_list: a list of busy dictionary events within a datetime range (with overlapping in/out of dates)
-    begin: start datetime of daterange
-    end: end datetime of daterange
-  Returns:
-    free_list: list with free blocks in datetime range
-  """
   busyList = []
 
   for event in busylist:
@@ -63,9 +54,9 @@ def to_datetime(begin, end):
   end = arrow.get(end)
   # Convert to strings for subsequent conversion
   begin_time = str(begin.time())
-  begin_hour = int(begin_time[:2])
+  begin_hour = beginhour()
   begin_minute = int(begin_time[3:5])
-
+  print(begin_hour)
   end_time = str(end.time())
   end_hour = int(end_time[:2])
   end_minute = int(end_time[3:5])
@@ -78,6 +69,7 @@ def to_datetime(begin, end):
     start = day[0].replace(hour=begin_hour, minute=begin_minute)
     end = day[1].replace(hour=end_hour, minute=end_minute)
     avail_tb = timeblock.TimeBlock(start,end, "Block : " + str(counter))
+
     avail_list.append(avail_tb)
 
   return avail_list
