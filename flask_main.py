@@ -85,10 +85,7 @@ def selectcalendar():
   print(theEvents)
   print("fr0ee times")
   for f in freeTimes:
-    print(f._start)
-    print("to")
-    print(f._end)
-  #print(freeTimes)
+    print(f)
 
   #print(theEvents)
   '''
