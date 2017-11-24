@@ -34,7 +34,10 @@ def freetimes(busylist, begin, end):
             freeBlocks.append(timeblock1)
             freeBlocks.append(timeblock2)
       else:
-        freeBlocks.append(ft)
+        if ft in freeBlocks:
+          continue
+        else:
+          freeBlocks.append(ft)
 
   return freeBlocks
 

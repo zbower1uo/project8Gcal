@@ -14,7 +14,7 @@ class TimeBlock:
 
 	def __eq__(self,timeblock):
 		#see if two timeblocks are equal 
-		return self._summary == timeblock._summary and self._start == timeblock._start_time and self._end == timeblock._end
+		return self._summary == timeblock._summary and self._start == timeblock._starttime and self._end == timeblock._end
 
 	def __str__(self):
 		#tostring
