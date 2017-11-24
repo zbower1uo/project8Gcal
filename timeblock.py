@@ -4,7 +4,10 @@ class TimeBlock:
 	#TODO add type for busy/free
 	def __init__(self, _start="00:00", _end="00:00", _summary=" ", ):
 		self._start = arrow.get(_start)
-		self._end = _arrow.get(_end)
+		self._end = arrow.get(_end)
+		
+		self._startdate = self.get_start_date()
+		self._enddate = self.get_end_date()
 		self._starttime = self._start.time()
 		self._endtime = self._end.time()
 		self._summary = _summary
@@ -19,11 +22,11 @@ class TimeBlock:
 
 	#getters/setters
 	def get_start_date(self):
-		sdate = arrow.get(_start)
+		sdate = arrow.get(self._start)
 		return sdate.date()
 
 	def get_end_date(self):
-		edate = arrow.get(_end)
+		edate = arrow.get(self._end)
 		return edate.date()
 
 
@@ -78,4 +81,8 @@ class TimeBlock:
 		return merged
 
 
+	def split_block(self ,timeblock):
+		timeblock1 = TimeBlock(self._start, timeblock._start, self._summary)
+		timeblock2 = TimeBlock(timeblock._end, self._end, self._summary)
+		return timeblock1,timeblock2
 ###TODO overload + op, index and comparison ops

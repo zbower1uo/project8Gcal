@@ -78,14 +78,18 @@ def selectcalendar():
   service = get_gcal_service(valid_credentials())
   calendarids = request.form.getlist("selected_cal")
   theEvents = []
+  date_range_start = arrow.get(flask.session['begin_date'][:10] + "T" + flask.session['start_time']).replace(tzinfo=tz.tzlocal())
+  date_range_end = arrow.get(flask.session['end_date'][:10] + "T" + flask.session['end_time']).replace(tzinfo=tz.tzlocal())
+
   #freetimes(busylist, begin, end):
   theEvents = calcb.getbusy(service, calendarids,flask.session['begin_date'],flask.session['end_date'])   
-  freeTimes = calcf.freetimes(theEvents,flask.session['begin_date'],flask.session['end_date'])
-  print("events")
-  print(theEvents)
-  print("fr0ee times")
+  freeTimes = calcf.freetimes(theEvents,date_range_start,date_range_end)
+  flask.flash("Busy Times")
+  for ev in theEvents:
+    flask.flash(str(ev._startdate) + " " + str(ev._starttime)+ " - " + str(ev._endtime))
+  flask.flash("free times")
   for f in freeTimes:
-    print(f)
+    flask.flash(str(f._startdate) + " " + str(f._starttime)+ " - "  + str(f._endtime))
 
   #print(theEvents)
   '''

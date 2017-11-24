@@ -14,17 +14,13 @@ def freetimes(busylist, begin, end):
   freeTimes = create_free_time(begin, end)
   #print(freeTimes)
   freeBlocks = []
-  print("inside loop")
-  for e in busyList:
-    print(e._startdate)
-
-
   for etime in busyList:
     for ft in freeTimes:
+      #dates are equal
       if ft._startdate == etime._startdate or ft._enddate == etime._enddate: # if dates are the same
         if etime._starttime < ft._starttime and etime._endtime > ft._endtime:
           continue
-        if etime._starttime >= ft._starttime or etime._endtime <= ft._endtime:
+        if etime._starttime >= ft._endtime or etime._endtime <= ft._starttime:
           freeBlocks.append(ft)
         else:
           timeblock1 , timeblock2 = ft.split_block(etime)
@@ -32,28 +28,34 @@ def freetimes(busylist, begin, end):
             continue
           if timeblock2._starttime >= timeblock2._endtime:
             freeBlocks.append(timeblock1)
-          if timeblock2._starttime >= timeblock2._endtime:
+          if timeblock1._starttime >= timeblock1._endtime:
             freeBlocks.append(timeblock2)
           elif timeblock1._starttime < timeblock1._endtime and timeblock2._starttime < timeblock2._endtime:
             freeBlocks.append(timeblock1)
             freeBlocks.append(timeblock2)
       else:
         freeBlocks.append(ft)
-  for f in freeTimes:
-    print(f._startdate)
-  return freeTimes
+
+  return freeBlocks
 
 
 def create_free_time(begin , end):
+  '''
+  Creates a block of free times, assumes the time given in application are free
+  loops through the number of days and creates timeblock obj
+
+  '''
+
   begin = arrow.get(begin)
   end = arrow.get(end)
+  bhourr = begin.time()
+  ehourr = end.time()
   dayDifference =  end - begin
-  
   dd = int((dayDifference).days)
   freeTimes = [] #create list for free times
   while dd >= 0:
-    bhour = begin.replace(hour = 0 , minute = 0) #
-    bend = begin.replace(hour = 23 , minute = 59 )
+    bhour = begin.replace(hour = bhourr.hour , minute = bhourr.minute) #
+    bend = begin.replace(hour = ehourr.hour , minute = ehourr.minute )
     freeTimes.append(timeblock.TimeBlock(bhour , bend , "FreeTime Block"))
     begin = begin.shift(days=+1)
     dd -=1
