@@ -4,6 +4,10 @@ import logging
 import arrow
 
 def freetimes(busylist, begin, end):
+  '''
+Current version for creating free times takes begin times and end times,
+creates a list of free times then parses it and returns the parsed times
+  '''
   busyList = []
   for b in busylist:
     print(b)
@@ -21,7 +25,8 @@ def freetimes(busylist, begin, end):
         if etime._starttime < ft._starttime and etime._endtime > ft._endtime:
           continue
         if etime._starttime >= ft._endtime or etime._endtime <= ft._starttime:
-          freeBlocks.append(ft)
+          if ft not in freeBlocks:
+            freeBlocks.append(ft)
         else:
           timeblock1 , timeblock2 = ft.split_block(etime)
           if timeblock1._starttime >= timeblock1._endtime and timeblock2._starttime >= timeblock2._endtime:
