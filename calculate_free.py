@@ -26,6 +26,10 @@ def freetimes(busylist, begin, end):
     else:
       freeBlocks.append(ft)
 
+  for f in freeBlocks:
+    if f in freeTimes:
+      freeBlocks.remove(f)
+
   return freeBlocks
   
 
