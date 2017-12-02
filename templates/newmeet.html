@@ -19,33 +19,17 @@
 </head>
 <body>
 <center>
- <div class="home_contents">
-  <!-- home page split into 3 rows -->
+  <p>Before we can start everything, let's fill out some information 
+     to really make your request shine.</p>
   <div class="row">
+  <form action="/newmeet" method="post"> 
+      Event Name: <input type= "text" name="meetingid" required><br>
 
-  <img class = "header" src="../static/img/stallmanheader.jpg">
-  <br>
-  <br>
-  </div>
-  <div class="row">
-  <!-- center row -->
-    <form action="/existing" method="post"> 
-      Join an existing meeting: <input type="text" name="meetingid"><br>
-      <br><input type="submit" value="Submit ID" />
+      Event Summary : <input type="text" name="summaryfield"><br>
+      
+      <br><input type= "submit" value="Submit ID" />
       <br>
-    </form>
-  </div>
-
-  <div class="row">
-    or
-    <br>
-    <form action="/newmeet">
-      Create a new meeting  <input type="submit" value="Go!" />
-    </form>
-
-  </div>
-
+  </form>
   </div> 
-    
 </body>
- </html>
+</html>

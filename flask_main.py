@@ -54,7 +54,7 @@ APPLICATION_NAME = 'MeetMe class project'
 #############################
 
 @app.route("/")
-@app.route("/index")
+@app.route("/index", methods =["POST", "GET"])
 def index():
   app.logger.debug("Entering index")
   if 'begin_date' not in flask.session:
@@ -68,8 +68,12 @@ def existing():
   look up their busy times and add them to find the available free times
   """
   flask.session['meetingid'] = request.form.get("meetingid")
-  return render_template('main.html')
-
+  db= DataAccessLayer()
+  busy = db.retrieve_database_items(flask.session['meetingid'])
+  if len(busy) == 0:
+    return render_template('main.html')
+  else:
+    return render_template('index.html')
 
 @app.route("/newmeet", methods =["POST", "GET"])
 def newmeeting():
@@ -78,7 +82,7 @@ def newmeeting():
     leave it blank
   """
   if request.method == 'POST':
-    flask.session['username'] = request.form.get("namefield")
+    flask.session['meetingid'] = request.form.get("meetingid")
     flask.session['eventsummary'] = " "
     return render_template('main.html')
   else:
@@ -147,7 +151,7 @@ def finalize():
   
   
 
-  return flask.redirect(flask.url_for("choose"))
+  return render_template('free.html')
 ####
 #
 #  Google calendar authorization:
