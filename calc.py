@@ -2,52 +2,20 @@ import arrow
 import timeblock
 from timeblock import TimeBlock
 
-
-def list_calendars(service):
-    """
-    Given a google 'service' object, return a list of
-    calendars.  Each calendar is represented by a dict.
-    The returned list is sorted to have
-    the primary calendar first, and selected (that is, displayed in
-    Google Calendars web app) calendars before unselected calendars.
-    """
-    print("Entering cft.list_calendars")  
-    calendar_list = service.calendarList().list().execute()["items"]
-    result = [ ]
-    for cal in calendar_list:
-        kind = cal["kind"]
-        id = cal["id"]
-        if "description" in cal: 
-            desc = cal["description"]
-        else:
-            desc = "(no description)"
-        summary = cal["summary"]
-        # Optional binary attributes with False as default
-        selected = ("selected" in cal) and cal["selected"]
-        primary = ("primary" in cal) and cal["primary"]
-        
-        result.append(
-            {"kind": kind,
-             "id": id,
-             "summary": summary,
-             "selected": selected,
-             "primary": primary,
-             })
-
-    return sorted(result, key=cal_sort_key)
-
-def cal_sort_key(cal):
-	if cal["selected"]:
-		selected_key = " "
-	else: 
-		selected_key = "X"
-	if cal["primary"]:
-		primary_key = " "
-	else:
-		primary_key = "X"
-	return (primary_key, selected_key, cal["summary"])
-
 def getbusy(service, flaskcalendarids, begindate, enddate):
+  """
+  service : A Google service object
+  flaskcalendarids: a list of calendar ids
+  begindate: The date to begin checking for events
+  enddate: The date to end check for events(inclusive)
+
+  This function returns a list of TimeBlock objects each of which represents a busytime
+  event going on , for example if the calendarid foo has an event on 01/01/2017 at 09:00
+  - 17:00 
+  The function would return a TimeBlock object with date 01/01/2017 and a start of 09:00 and
+  end of 17:00
+  
+  """
   calendarids = flaskcalendarids
   theEvents = []
   #formatting the date and time into an iso format, using nows to add the timezone
@@ -71,17 +39,11 @@ def getbusy(service, flaskcalendarids, begindate, enddate):
         end = e["end"]["dateTime"]
       else:
         raise Exception("unknown time format/something went wrong")
-      t = TimeBlock(start,end,summary)
+      t = TimeBlock(start,end)
       theEvents.append(t)
 
   return theEvents
 
-
-def order_busy(tosort):
-    
-    for time in tosort:
-        busyStart = arrow.get(time["start"]).format('YYYY-MM-DD HH:mm')
-        busyEnd = arrow.get(time["end"]).format('YYYY-MM-DD HH:mm')
 
         
 

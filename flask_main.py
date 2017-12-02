@@ -6,9 +6,11 @@ import uuid
 import calc as calcb
 import json
 import logging
-
+import data_access_layer as dal
+from data_access_layer import DataAccessLayer
 import calculate_free as calcf
-
+import timeblock
+from timeblock import TimeBlock
 # Date handling 
 import arrow # Replacement for datetime, based on moment.js
 # import datetime # But we still need time
@@ -26,6 +28,8 @@ from apiclient import discovery
 # Globals
 ###
 import config
+global theEvents
+
 if __name__ == "__main__":
     CONFIG = config.configuration()
 else:
@@ -39,6 +43,7 @@ app.secret_key=CONFIG.SECRET_KEY
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_KEY_FILE  ## You'll need this
 APPLICATION_NAME = 'MeetMe class project'
+#event list
 
 
 
@@ -56,6 +61,29 @@ def index():
     init_session_values()
   return render_template('index.html')
 
+@app.route("/existing", methods =["POST", "GET"])
+def existing():
+  """
+  This page is used when there is already an existing meeting and a person wants to
+  look up their busy times and add them to find the available free times
+  """
+  flask.session['meetingid'] = request.form.get("meetingid")
+  return render_template('main.html')
+
+
+@app.route("/newmeet", methods =["POST", "GET"])
+def newmeeting():
+  """
+    Get information from the user if they input it else we just 
+    leave it blank
+  """
+  if request.method == 'POST':
+    flask.session['username'] = request.form.get("namefield")
+    flask.session['eventsummary'] = " "
+    return render_template('main.html')
+  else:
+    return render_template('newmeet.html')
+
 @app.route("/choose")
 def choose():
     ## We'll need authorization to list calendars 
@@ -71,46 +99,55 @@ def choose():
     gcal_service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     flask.g.calendars = list_calendars(gcal_service)
-    return render_template('index.html')
+    return render_template('main.html')
 
 @app.route("/calendar", methods =["POST", "GET"])
 def selectcalendar():
+  e = []
   service = get_gcal_service(valid_credentials())
   calendarids = request.form.getlist("selected_cal")
-  theEvents = []
-  date_range_start = arrow.get(flask.session['begin_date'][:10] + "T" + flask.session['start_time']).replace(tzinfo=tz.tzlocal())
-  date_range_end = arrow.get(flask.session['end_date'][:10] + "T" + flask.session['end_time']).replace(tzinfo=tz.tzlocal())
+  flask.session["calendarids"] = calendarids
+  e = calcb.getbusy(service, calendarids,flask.session['begin_date'],flask.session['end_date'])   
 
-  #freetimes(busylist, begin, end):
-  theEvents = calcb.getbusy(service, calendarids,flask.session['begin_date'],flask.session['end_date'])   
-  freeTimes = calcf.freetimes(theEvents,date_range_start,date_range_end)
-  flask.flash("Busy Times")
-  for ev in theEvents:
-    flask.flash(str(ev._startdate) + " " + str(ev._starttime)+ " - " + str(ev._endtime))
-  flask.flash("free times")
-  for f in freeTimes:
-    flask.flash(str(f._startdate) + " " + str(f._starttime)+ " - "  + str(f._endtime))
+  flask.flash("Busy Times")  
+  for ev in e:
+    flask.flash(str(ev.start))
 
-  #print(theEvents)
-  '''
-  for ev in theEvents:
-    date_range_start = arrow.get(flask.session['begin_date'][:10] + "T" + flask.session['start_time']).replace(tzinfo=tz.tzlocal())
-    date_range_end = arrow.get(flask.session['end_date'][:10] + "T" + flask.session['end_time']).replace(tzinfo=tz.tzlocal())
-    event_start_time = arrow.get(ev["start"]).format('HH:mm:ss')
-    event_end_time = arrow.get(ev["end"]).format('HH:mm:ss') 
-    #only one case was handled
-    #busy time is before start and extends to after 
-    #2 other cases to consider
-    formated_start = arrow.get(ev["start"]).format('YYYY-MM-DD HH:mm')
-    formated_end = arrow.get(ev["end"]).format('YYYY-MM-DD HH:mm')
-    if event_start_time <= flask.session["start_time"] and event_end_time >= flask.session["end_time"]:
-      flask.flash("summary : " + ev["summary"] + " from  " + formated_start +" to "+ formated_end)
-    #change 
-    if event_start_time >= flask.session["start_time"] and event_end_time <= flask.session["end_time"]:
-      flask.flash("summary : " + ev["summary"] + " from  " + formated_start +" to "+ formated_end)
-	'''
+  db= DataAccessLayer()
+  for ev in e:
+    db.insert_busy_times( ev ,flask.session['meetingid'])
+  
+  flask.flash("If everything looks correct, hit the finalize button to set the meeting and invite others")
   return flask.redirect(flask.url_for("choose"))
 
+@app.route("/confirm", methods =["POST", "GET"])
+def finalize():
+  service = get_gcal_service(valid_credentials())
+
+  db= DataAccessLayer()
+  busy = db.retrieve_database_items(flask.session['meetingid'])
+  
+  theEvents = []
+  for item in busy:
+    start = arrow.get(item["start"])
+    end = arrow.get(item["end"])
+    theEvents.append(timeblock.TimeBlock(start,end))       
+
+  date_range_start = arrow.get(flask.session['begin_date'][:10] + "T" + flask.session['start_time']).replace(tzinfo=tz.tzlocal())
+  date_range_end = arrow.get(flask.session['end_date'][:10] + "T" + flask.session['end_time']).replace(tzinfo=tz.tzlocal())
+  freeTimes = calcf.freetimes(theEvents,date_range_start,date_range_end)
+
+  flask.flash("free times so far")
+  for f in freeTimes:
+    flask.flash(f["date"] +" start: " + str(f["index"]) + " " + "duration : " + str(f["duration"]) )
+
+  # create database object
+  
+  
+  
+  
+
+  return flask.redirect(flask.url_for("choose"))
 ####
 #
 #  Google calendar authorization:
@@ -384,6 +421,9 @@ def cal_sort_key( cal ):
     return (primary_key, selected_key, cal["summary"])
 
 
+def simple_hash():
+  flask.session['username']
+  flask.session['begin_date']
 #################
 #
 # Functions used within the templates

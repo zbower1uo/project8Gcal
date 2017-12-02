@@ -1,88 +1,104 @@
 import arrow
+import numpy
+import math
 
 class TimeBlock:
-	#TODO add type for busy/free
-	def __init__(self, _start="00:00", _end="00:00", _summary=" ", ):
-		self._start = arrow.get(_start)
-		self._end = arrow.get(_end)
-		
-		self._startdate = self.get_start_date()
-		self._enddate = self.get_end_date()
-		self._starttime = self._start.time()
-		self._endtime = self._end.time()
-		self._summary = _summary
+  def __init__(self ,start="00:00",end="00:00"):
+    self.start = arrow.get(start)
+    self.end = arrow.get(end)
+    self.date = self.start.date()
+    self.bittime = parse_datetime(start , end)
+    self.date_str = str(self.date)
 
-	def __eq__(self,timeblock):
-		#see if two timeblocks are equal 
-		return self._summary == timeblock._summary and self._start == timeblock._starttime and self._end == timeblock._end
-
-	def __str__(self):
-		#tostring
-		return "Start: {0} End: {1} Summary: {2}".format(self._start,self._end,self._summary)
-
-	#getters/setters
-	def get_start_date(self):
-		sdate = arrow.get(self._start)
-		return sdate.date()
-
-	def get_end_date(self):
-		edate = arrow.get(self._end)
-		return edate.date()
+def create_time_block():
+  '''
+  Function to initialize an empty time block filled with 0's
+  '''
+  freeTime = numpy.full((96), 0 , dtype=int)              
+  return freeTime
 
 
-	def get_summary(self):
-		return self._summary
+def parse_datetime(begin ,  end):
+    '''
+    Will parse a date given to be retured as an array of bitstrings ( 1 for busy 0 for free)
+    ex input '2017-01-01 12:30:45' : will result in taking the HH:mm and parsing it based on a bit
+    string with elements 0 - 23 representing 15min intervals and element 24 the date 1 reprsents busy
+    0 free
+    ex:
+    0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 2017-01-01
+       0        1       2       3           4       5
+    0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 2017-01-01
+       6        7       8        9       10      11
+    0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 2017-01-01
+        12      13      14         15       16      17
+    0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 2017-01-01
+        18      19      20     21          22       23
+    '''
+    pdatetime = arrow.get(begin).format('YYYY-MM-DD HH:mm')#parsed date
+    edatetime = arrow.get(end).format('YYYY-MM-DD HH:mm')
 
-	def get_start_time(self):
-		return self._start
+    #begin min/hour
+    phour = pdatetime[11:13]#12
+    pmin = pdatetime[14:16]#30
+    #end min/hour
+    ehour = edatetime[11:13]#12
+    emin = edatetime[14:16]#30
 
-	def get_end_time(self):
-		return self._end
+    starposH =(int(phour) * 4)#getting the element to start at
+    startposM = (int(pmin) /15)
+    startPosition = starposH + startposM
 
-	def set_start_time(self,st):
-		_start = st
-	
-	def set_end_time(self,et):
-		_end = et
+    endposH = (int(ehour) * 4)
+    eposM = (int(emin) / 15)
+    endPosition = ((endposH + eposM)-1)
 
-	def set_description(self,summary):
-		_summary = summary
-	
-	#printing function
-	def to_string(self):
-		return "Start: {0} End: {1} Summary: {2}".format(self._start,self._end,self._summary)
+    eventBitstring = create_time_block()
+    eventBitstring [int(startPosition)]= 1
+    eventBitstring [int(endPosition)] = 1
 
-	def does_overlap(self,timeblock):
-		# checks if two blocks are essentially the same/ checks their overlap
-		if self._end < timeblock._start or other._end < self._start:
-			return False
-		return True
+    length = endPosition - startPosition
+    
+    for i in range(int(length)):
+        eventBitstring[int(startPosition) + i] = 1
+ 
+    return eventBitstring
 
-	def get_overlap(self,timeblock):
+#add variable for either 1 or 0 depending on free/busy lookup
+def bit_to_datetime(bitstring, date):
+  """
+  Bitstring: a bitstring to convert 
+  
+  date: The date the event occurs on
 
-		mergedSummary = self._summary + " | " + timeblock._summary
-		#self ends after
-		if self._end > timeblock._end:
-			overlap = TimeBlock(timeblock._start,timeblock._end,mergedSummary)
-		else:
-			overlap = TimeBlock(other.start_time,self.end_time,description)
-		if timeblock._start < self._start:
-			if self._end > timeblock._end:
-				overlap = TimeBlock(self._start, timeblock._end, mergedSummary)
-			else:
-				overlap = TimeBlock(self._start, self._end, mergedSummary)
+  Function takes a bitstring and changes it to dateTime obj
+  the duration is then calculated and added to start time giving start/end
 
-		return overlap
-	
-	def merge_blocks(self,timeblock):
-		#merges two time blocks
-		mergedSummary = self._summary + " | " + timeblock._summary
-		merged = TimeBlock(self._start,timeblock._end, mergedSummary)
-		return merged
+  ex 1111 0000 (with one block representing midnight and one 01:00)
+  this will calculate 0 for hour and 45 duration, resulting in 00:45
+  """
+  stringlen = len(bitstring)
+  index = 0 #index to store the start pos
+  duration = 0
+  for i in range(stringlen):
+    if bitstring[i] == 1: #get starting position the start of the time
+      index = i
+      while( i < stringlen-1): #find out duration by adding all the ones
+        if bitstring[i] == 1:
+          duration +=1
+        i+=1
+      break
+  #convert said results to start hour/min, then add the duration to find the end time
+  timeHour = int(index / 4)
+  timeMin = int((index % 4) * 15)
 
+  if timeHour < 10 and timeMin < 15: 
+    arrowStart = "{0} 0{1}:0{2}:00".format(date,timeHour,timeMin)
+  elif timeHour < 10:
+    arrowStart = "{0} 0{1}:{2}:00".format(date,timeHour,timeMin)
+  else:
+    arrowStart = "{0} {1}:{2}:00".format(date,timeHour,timeMin)
 
-	def split_block(self ,timeblock):
-		timeblock1 = TimeBlock(self._start, timeblock._start, self._summary)
-		timeblock2 = TimeBlock(timeblock._end, self._end, self._summary)
-		return timeblock1,timeblock2
-###TODO overload + op, index and comparison ops
+  timeBegin = arrow.get(arrowStart)
+  timeEnd = timeBegin.shift(minutes=+ (duration *15))
+
+  return timeBegin ,timeEnd
